@@ -1,0 +1,62 @@
+---
+- hosts: testhosts
+  become: yes
+
+  vars_prompt:
+    - name: USERNAME
+      prompt: 'What is the new username?'
+      private: no
+
+    - name: PASSWORD
+      prompt: 'What is the new password?'
+      private: yes
+      encrypt: sha512_crypt
+      salt_size: 7
+
+    - name: ROLE
+      prompt: 'What role must be assigned to the new user? (eq: office, programmer, admin, web)'
+      private: no
+
+
+  tasks:
+    - block:
+      - name: Creating user "{{USERNAME}}"
+        user:
+          name: "{{USERNAME}}"
+          password: "{{PASSWORD}}"
+          groups: sudo
+          append: yes
+          createhome: yes
+          state: present
+          shell: /bin/bash
+          system: yes
+      when: ROLE == "admin"
+
+    - block:
+      - name: Creating user "{{USERNAME}}"
+        user:
+          name: "{{USERNAME}}"
+          password: "{{PASSWORD}}"
+          createhome: yes
+          state: present
+      - name: Installing required software
+        apt:
+          update_cache: yes
+          pkg:
+          - apache2
+      when: ROLE == "web"
+
+    - block:
+      - name: Creating user "{{USERNAME}}"
+        user:
+          name: "{{USERNAME}}"
+          password: "{{PASSWORD}}"
+          createhome: yes
+          state: present
+      - name: Installing required software
+        apt:
+          update_cache: yes
+          pkg:
+          - python2
+          - python3
+      when: ROLE == "programmer"

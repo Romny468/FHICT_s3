@@ -1,0 +1,106 @@
+---
+- hosts: testhosts
+  become: true
+  become_user: root
+  vars:
+    domain: "test1"
+    ssl_domain: false
+
+    # If add_redirect is set to true, an ssl domain will be generated
+    add_redirect: false
+
+
+    # DO NOT CHANGE ANYTHING BELOW THIS LINE
+    http_host: "{{ domain }}.local"
+    http_conf: "{{ domain }}.conf"
+    http_port: "80"
+    https_port: "443"
+
+  tasks:
+    - when: add_redirect
+      set_fact:
+        ssl_domain: true
+
+    - name: Install latest apache2 version
+      apt:
+        name: apache2
+        update_cache: yes
+        cache_valid_time: 1200
+        state: latest
+
+    -  name: Create the document root
+       file:
+         path: "/var/www/{{ domain }}"
+         state: directory
+         #owner: "{{ app_user }}"
+         mode: '0755'
+
+    - name: Copy basic index page
+      template:
+        src: "/home/ansible/copy_files/index.html.j2"
+        dest: "/var/www/{{ domain }}/index.html"
+
+    - when: ssl_domain == false and add_redirect == false
+      block:
+        - name: '[HTTP] Set up virtuahHost'
+          template:
+            src: "/home/ansible/copy_files/apache.conf.j2"
+            dest: "/etc/apache2/sites-available/{{ http_conf }}"
+          notify: restart-apache
+          
+    - when: ssl_domain == true and add_redirect == false
+      block:
+        - name: '[HTTPS] Create silf-signed ssl cert'
+          expect:
+            command: "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/{{ domain }}.key -out /etc/ssl/certs/{{ domain }}.crt"
+            responses:
+              Country(.*): "NL"
+              State(.*): "Noord-Brabant"
+              Locality(.*): "Breda"
+              Organization(.*): "."
+              Common(.*): "."
+              Email(.*): "."
+
+        - name: '[HTTPS] Set up virtuahHost'
+          template:
+            src: "/home/ansible/copy_files/apache_ssl.conf.j2"
+            dest: "/etc/apache2/sites-available/{{ http_conf }}"
+          notify: restart-apache
+
+        - name: '[HTTPS] Enable SSL module'
+          apache2_module:
+            state: present
+            name: ssl
+            
+    - when: ssl_domain == true and add_redirect == true
+      block:
+        - name: '[HTTPS + Redirect] Create silf-signed ssl cert'
+          expect:
+            command: "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/{{ domain }}.key -out /etc/ssl/certs/{{ domain }}.crt"
+            responses:
+              Country(.*): "NL"
+              State(.*): "Noord-Brabant"
+              Locality(.*): "Breda"
+              Organization(.*): "."
+              Common(.*): "."
+              Email(.*): "."
+
+        - name: '[HTTPS + Redirect] Set up virtuahHost'
+          template:
+            src: "/home/ansible/copy_files/apache_ssl+redirect.conf.j2"
+            dest: "/etc/apache2/sites-available/{{ http_conf }}"
+          notify: restart-apache
+
+        - name: '[HTTPS + Redirect] Enable SSL module'
+          apache2_module:
+            state: present
+            name: ssl
+
+    - name: Enable "{{ http_conf }}"
+      command: a2ensite "{{ http_conf }}"
+
+  handlers:
+    - name: restart-apache
+      service:
+        name: apache2
+        state: restarted

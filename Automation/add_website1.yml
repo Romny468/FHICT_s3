@@ -1,0 +1,51 @@
+---
+- hosts: testhosts
+  become: true
+  become_user: root
+  vars:
+    domain: "borat"
+    ssl_domain: true
+
+    http_host: "{{ domain }}.local"
+    http_conf: "{{ domain }}.conf"
+    http_port: "80"
+
+    #http_host: "test3.local"
+    #http_conf: "test3.conf"
+    #http_port: "80"
+
+
+  tasks:
+    - name: Install latest apache2 version
+      apt:
+        name: apache2
+        update_cache: yes
+        cache_valid_time: 1200
+        state: latest
+
+    - name: Create the document root
+      file:
+        path: "/var/www/{{ domain }}"
+        state: directory
+        #owner: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Copy basic index page
+      template:
+        src: "/home/ansible/copy_files/index.html.j2"
+        dest: "/var/www/{{ domain }}/index.html"
+
+    - name: Set up virtuahHost
+      template:
+        src: "/home/ansible/copy_files/apache.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+      notify: restart-apache
+
+    - name: Enable "{{ http_conf }}"
+      command: a2ensite "{{ http_conf }}"
+
+  handlers:
+    - name: restart-apache
+      service:
+        name: apache2
+        state: restarted

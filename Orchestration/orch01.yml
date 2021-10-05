@@ -39,11 +39,27 @@
           password: "{{PASSWORD}}"
           createhome: yes
           state: present
-      - name: Installing required software
+      - name: Installing required software for "{{ ROLE }}"
+        apt:
+          update_cache: yes
+          pkg:
+          - python2
+          - python3
+      when: ROLE == "programmer"
+
+    - block:
+      - name: Creating user "{{USERNAME}}"
+        user:
+          name: "{{USERNAME}}"
+          password: "{{PASSWORD}}"
+          createhome: yes
+          state: present
+      - name: Installing required software for "{{ ROLE }}"
         apt:
           update_cache: yes
           pkg:
           - apache2
+          - certbot
       when: ROLE == "web"
 
     - block:
@@ -53,10 +69,9 @@
           password: "{{PASSWORD}}"
           createhome: yes
           state: present
-      - name: Installing required software
+      - name: Installing required software for "{{ ROLE }}"
         apt:
           update_cache: yes
           pkg:
-          - python2
-          - python3
-      when: ROLE == "programmer"
+          - libreoffice
+      when: ROLE == "office"

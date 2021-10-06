@@ -1,0 +1,15 @@
+---
+- hosts: testhosts
+  become: yes
+
+  vars_prompt:
+    - name: USERNAME
+      prompt: 'Which user do you want to remove?'
+      private: no
+
+  tasks:
+    - name: "Removing user: {{ USERNAME }}"
+      user:
+        name: "{{ USERNAME }}"
+        state: absent
+        remove: yes

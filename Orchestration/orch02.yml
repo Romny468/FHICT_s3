@@ -4,7 +4,7 @@
 
   vars_prompt:
     - name: USERNAME
-      prompt: 'Which user do you want to remove?'
+      prompt: 'What is the username you want to remove?'
       private: no
 
   tasks:

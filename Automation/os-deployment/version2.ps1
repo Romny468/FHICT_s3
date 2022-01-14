@@ -81,7 +81,8 @@ Write-Host
  
 $chosenVM = 0
 do {
-    $inputValid = [int]::TryParse((Read-Host 'Enter the [number] of the VM to clone (the donor)'), [ref]$chosenVM)
+    $inputValid = $true #[int]::TryParse((Read-Host 'Enter the [number] of the VM to clone (the donor)'), [ref]$chosenVM)
+    $chosenVM = ($guests.Count - 1)
     if($chosenVM -lt 0 -or $chosenVM -ge $guests.Count) {
         $inputValid = $false
     }
@@ -99,6 +100,8 @@ if($guests[$chosenVM].PowerState -ne "PoweredOff") {
 If(-not ($guests[$chosenVM].ExtensionData.Config.Files.VmPathName -match '\[(.*)\] ([^\/]*)\/(.*)')) {
     Throw "ERROR: Could not calculate the datastore"
 }
+Write-Host $chosenVM
+
 $VMdatastore = $Matches[1]
 $VMdirectory = $Matches[2]
 $VMXlocation = ("/vmfs/volumes/" + $VMdatastore + "/" + $VMdirectory + "/" + $Matches[3])

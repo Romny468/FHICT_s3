@@ -1,51 +1,3 @@
-<#
- 
-.SYNOPSIS
-    Clones a VM,
- 
-.DESCRIPTION
-    This script:
- 
-    - Retrieves a list of VMs attached to the host
-    - Enables the user to choose which VM to clone
-    - Clones the VM
- 
-    It must be run on a Windows machine that can connect to the virtual host.
- 
-    This depends on the Posh-SSH and PowerCLI modules, so from an elevated
-    PowerShell prompt, run:
- 
-        Install-Module PoSH-SSH
-        Install-Module VMware.PowerCLI
- 
-    For free ESXi, the VMware API is read-only. That limits what we can do with
-    PowerCLI. Instead, we run certain commands through SSH. You will therefore
-    need to enable SSH on the ESXi host before running this script.
-     
-    The script only handles simple hosts with datastores under /vmfs. And it
-    clones to the same datastore as the donor VM. Your setup and requirements
-    may be more complex. Adjust the script to suit.
- 
-.EXAMPLE
-    From a PowerShell prompt:
- 
-      .\New-GuestClone.ps1 -ESXiHost 192.168.101.100
- 
-.COMPONENT
-    VMware scripts
- 
-.NOTES
-    This release:
- 
-        Version: 1.0
-        Date:    8 July 2021
-        Author:  Rob Pomeroy
- 
-    Version history:
- 
-        1.0 - 8 July 2021 - first release
- 
-#>
 param
 (
     [Parameter(Mandatory = $true, Position = 0)][String]$ESXiHost
@@ -59,6 +11,9 @@ param
 Write-Host Loading PowerShell modules...
 Import-Module PoSH-SSH
 Import-Module VMware.PowerCLI
+ 
+# Get random number for machine name
+$machinename = Get-Random -Minimum -10000 -Maximum 99999 
  
 # Change to the directory where this script is running
 Push-Location -Path ([System.IO.Path]::GetDirectoryName($PSCommandPath))
@@ -82,7 +37,7 @@ If(-not (Test-Path -Path $credsFile)) {
     $creds.Password | ConvertFrom-SecureString | Set-Content $credsFile
 }
 $ESXICredential = New-Object System.Management.Automation.PSCredential( `
-    "root", `
+    "ansible", `
     (Get-Content $credsFile | ConvertTo-SecureString)
 )
  
@@ -172,7 +127,7 @@ If(-not (Test-SFTPPath -SessionId 0 -Path $VMXlocation)) {
  
 $validInput = $false
 While(-not $validInput) {
-    $newVMname = Read-Host "Enter the name of the new VM"
+    $newVMname = $machinename
     $newVMdirectory = ("/vmfs/volumes/" + $VMdatastore + "/" + $newVMname)
  
     # Check if the directory already exists
@@ -275,4 +230,4 @@ Get-SSHSession | Remove-SSHSession | Out-Null
 Get-SFTPSession | Remove-SFTPSession | Out-Null
  
 # Return to previous directory
-Pop-Location
+#Pop-Location

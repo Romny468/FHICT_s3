@@ -13,7 +13,8 @@ Import-Module PoSH-SSH
 Import-Module VMware.PowerCLI
  
 # Get random number for machine name
-$machinename = Get-Random -Minimum -10000 -Maximum 99999 
+$machinename = Get-Random -Minimum 10000 -Maximum 99999
+$machinename = ("" + $machinename + "_web")
  
 # Change to the directory where this script is running
 Push-Location -Path ([System.IO.Path]::GetDirectoryName($PSCommandPath))
